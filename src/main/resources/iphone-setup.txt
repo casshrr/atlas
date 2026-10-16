@@ -1,0 +1,64 @@
+ATLAS · IPHONE SETUP
+
+Mac import and review are implemented. A Shortcut still needs to be created on your iPhone and tested with your card. No iPhone app or signed Shortcut is included in this release.
+
+YOUR iOS 26.6.1 PHONE
+
+Start with Shortcuts → Automation → Transaction and select your Wallet card. Apple describes this trigger as firing when the selected card is tapped. It is not access to every bank notification, a statement feed, or proof that a charge settled. Online purchases, transfers and payments outside this trigger can be missed.
+
+Test the automation's input first. Inspect which amount, currency and merchant properties it actually provides on your device. Do not invent missing values. If a required value is absent, Atlas will ask for review. Only set kind to purchase after verifying that your source represents a completed purchase.
+
+Apple's iOS 27 guide describes a Notification trigger; the iOS 26 guide does not. That route is not enabled on your current phone. SMS/email can be considered separately if your bank sends transaction messages.
+
+CONNECT iCLOUD
+
+1. Use the same Apple Account and enable iCloud Drive on your iPhone and Mac.
+2. In Files on iPhone, create iCloud Drive / Shortcuts / Atlas. Keep it private, not shared with other people.
+3. In Atlas, open iPhone inbox → Choose iCloud folder and select that same folder. In Finder, choose Keep Downloaded for it if available.
+4. Atlas reads top-level .json files every 10 seconds while open. It never edits or deletes them. Allow time for iCloud sync; importing does not run after you quit Atlas.
+
+BUILD THE SHORTCUT
+
+Create one JSON dictionary per payment with Shortcuts actions. Use Dictionary values instead of inserting notification text into hand-written JSON: quotes and newlines must be escaped correctly.
+
+Required keys:
+eventId — Generate UUID once per event. Reuse it for a retry.
+source — Fixed name such as Wallet · My card. No account number needed.
+capturedAt — Original capture time as ISO 8601 with offset, e.g. 2026-10-15T12:34:56+01:00. Do not replace it with the Mac sync time.
+timeZone — IANA zone such as Europe/London or Asia/Almaty at capture time. If you use a fixed zone, update it when travelling.
+text — Original payment text if available, otherwise an empty string. Exclude unrelated notifications, card/account numbers, balances and login codes.
+
+Optional keys, only when unambiguous:
+amount — Positive JSON number, at most 2 decimals, without symbols or grouping.
+currency — Three-letter code, e.g. GBP or KZT. A dollar symbol alone is ambiguous.
+merchant — Merchant name, at most 200 characters.
+kind — purchase only for a verified purchase source; otherwise omit it.
+
+Save the dictionary as <eventId>.json in Shortcuts / Atlas. Use Set Name / Save File as needed. After choosing the folder, turn off Ask Where to Save. Verify the resulting file contains JSON and ends in .json, not .json.txt. Never append events to one big file or overwrite older payments. Select Run Immediately only if offered, after testing permissions and input.
+
+SAFE INITIAL TEST
+
+Before connecting real payments, save a dictionary with a fresh UUID, current timestamp, your time zone, source "Setup test" and text "Atlas connection test". Omit optional keys. It should appear in iPhone inbox without changing totals. Dismiss it afterwards.
+
+Then test one real Wallet payment against your bank record. Also test locked-phone capture and delayed syncing. Enable unattended capture only after those work. This release has not been tested on a physical iPhone; Wallet property mappings are not yet verified.
+
+REVIEW AND AUTOMATIC IMPORT
+
+Unfamiliar merchants, missing fields, ambiguous numbers, multiple monetary values, and signs of refunds, transfers, pending or declined payments go to review. Parsing is intentionally narrow; one supported template is "Paid £12.50 at Example Cafe". Other bank formats may need review until a tested parser is added.
+
+Choose Review purchase, check all fields, and confirm payment completed. Remember this category is optional and initially off. It learns the category for that exact source and merchant, allowing later clear purchases to import automatically. Unconfirmed captures never affect totals or insights.
+
+A matching expense amount/currency/day triggers a possible-duplicate warning, even for a genuine separate purchase. Explicit review override is required. Exact retries do not create more expenses. Deleting an expense or dismissing a capture does not let its original file recreate it. This is duplicate protection, not bank reconciliation.
+
+PRIVACY AND RECOVERY
+
+The server stays on your Mac's loopback interface. iCloud stores and syncs the source files through Apple; this is not a cloud-free transport. Anyone able to write to the chosen folder can supply events, so keep it private. No bank credentials or phone-wide notification access are requested.
+
+Raw text stays in the local review record until resolved, then is cleared. Source, merchant, amount, date, status and retry fingerprint remain. iCloud files still contain what the Shortcut wrote. Back up your data, then remove old source files yourself when appropriate; removing a file does not delete an expense, review or merchant rule. Disconnect stops new scans but keeps existing data.
+
+Malformed, oversized (>64 KiB) or unsupported files are not imported. Failed files are retried approximately every minute. Check format, timestamp, time zone, extension and download status. Reopening Atlas safely rescans the folder. Move backed-up old files elsewhere to keep large folders fast.
+
+APPLE REFERENCES
+Wallet trigger (iOS 26): https://support.apple.com/en-gb/guide/shortcuts/apd65c67538a/ios
+Event triggers (iOS 26): https://support.apple.com/en-gb/guide/shortcuts/apd932ff833f/9.0/ios/26
+Notification trigger (iOS 27): https://support.apple.com/en-ng/guide/shortcuts/apd932ff833f/10.0/ios/27
